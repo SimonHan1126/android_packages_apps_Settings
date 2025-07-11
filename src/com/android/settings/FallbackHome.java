@@ -91,7 +91,7 @@ public class FallbackHome extends Activity {
                 Settings.Global.DEVICE_PROVISIONED, 0) != 0;
         final int flags;
         if (!mProvisioned) {
-            setTheme(R.style.FallbackHome_SetupWizard);
+            setTheme(R.style.FallbackHome_NoWallpaper);
             flags = View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                     | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
         } else {
@@ -109,7 +109,7 @@ public class FallbackHome extends Activity {
 
         registerReceiver(mReceiver, new IntentFilter(Intent.ACTION_USER_UNLOCKED));
         maybeFinish();
-        mKIOSK = SystemProperties.getBoolean("persist.kiosk_mode", false);
+        mKIOSK = false; // SystemProperties.getBoolean("persist.kiosk_mode", false);
     }
 
     @Override
