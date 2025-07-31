@@ -23,15 +23,18 @@ import static android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS;
 
 import static com.android.settings.Utils.SETTINGS_PACKAGE_NAME;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.content.pm.UserInfo;
+import android.os.PowerManager;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.Log;
@@ -44,6 +47,7 @@ import com.android.settings.homepage.DeepLinkHomepageActivity;
 import com.android.settings.search.SearchStateReceiver;
 import com.android.settingslib.utils.ThreadUtils;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,20 +59,52 @@ import java.util.List;
  * enables DeepLinkHomepageActivity for large screen devices.
  */
 public class SettingsInitialize extends BroadcastReceiver {
-    private static final String TAG = "Settings";
+    private static final String TAG = "SIMON_MODIFIED_Settings";
     private static final String PRIMARY_PROFILE_SETTING =
             "com.android.settings.PRIMARY_PROFILE_CONTROLLED";
     private static final String WEBVIEW_IMPLEMENTATION_ACTIVITY = ".WebViewImplementation";
 
+    private static final String PREFS_NAME = "boot_prefs";
+    private static final String KEY_IS_FIRST_BOOT_DONE = "is_first_boot";
+
+
     @Override
     public void onReceive(Context context, Intent broadcast) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        boolean isFirstBoot = prefs.getBoolean(KEY_IS_FIRST_BOOT_DONE, true);
+        if (isFirstBoot) {
+            prefs.edit().putBoolean(KEY_IS_FIRST_BOOT_DONE, false).apply();
+            rebootDevice(context);
+            return;
+        }
+
         final UserManager um = (UserManager) context.getSystemService(Context.USER_SERVICE);
-        UserInfo userInfo = um.getUserInfo(UserHandle.myUserId());
+        @SuppressLint("MissingPermission") UserInfo userInfo = um.getUserInfo(UserHandle.myUserId());
         final PackageManager pm = context.getPackageManager();
         managedProfileSetup(context, pm, broadcast, userInfo);
         webviewSettingSetup(context, pm, userInfo);
         ThreadUtils.postOnBackgroundThread(() -> refreshExistingShortcuts(context));
         enableTwoPaneDeepLinkActivityIfNecessary(pm, context);
+    }
+
+    @SuppressLint("MissingPermission")
+    private void rebootDevice(Context context) {
+        try {
+            PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (powerManager != null) {
+                Log.i(TAG, "Initiating system reboot...");
+                powerManager.reboot("Config file missing");
+            }
+        } catch (SecurityException e) {
+            Log.e(TAG, "No permission to reboot, trying alternative method", e);
+            try {
+                Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot"});
+            } catch (Exception ex) {
+                Log.e(TAG, "All reboot methods failed", ex);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to reboot device", e);
+        }
     }
 
     private void managedProfileSetup(Context context, final PackageManager pm, Intent broadcast,
