@@ -47,7 +47,6 @@ import com.android.settings.homepage.DeepLinkHomepageActivity;
 import com.android.settings.search.SearchStateReceiver;
 import com.android.settingslib.utils.ThreadUtils;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,19 +64,11 @@ public class SettingsInitialize extends BroadcastReceiver {
     private static final String WEBVIEW_IMPLEMENTATION_ACTIVITY = ".WebViewImplementation";
 
     private static final String PREFS_NAME = "boot_prefs";
-    private static final String KEY_IS_FIRST_BOOT_DONE = "is_first_boot";
+    private static final String KEY_IS_FIRST_BOOT = "is_first_boot";
 
 
     @Override
     public void onReceive(Context context, Intent broadcast) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        boolean isFirstBoot = prefs.getBoolean(KEY_IS_FIRST_BOOT_DONE, true);
-        if (isFirstBoot) {
-            prefs.edit().putBoolean(KEY_IS_FIRST_BOOT_DONE, false).apply();
-            rebootDevice(context);
-            return;
-        }
-
         final UserManager um = (UserManager) context.getSystemService(Context.USER_SERVICE);
         @SuppressLint("MissingPermission") UserInfo userInfo = um.getUserInfo(UserHandle.myUserId());
         final PackageManager pm = context.getPackageManager();
@@ -85,6 +76,24 @@ public class SettingsInitialize extends BroadcastReceiver {
         webviewSettingSetup(context, pm, userInfo);
         ThreadUtils.postOnBackgroundThread(() -> refreshExistingShortcuts(context));
         enableTwoPaneDeepLinkActivityIfNecessary(pm, context);
+
+//        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+//        boolean isFirstBoot = prefs.getBoolean(KEY_IS_FIRST_BOOT, true);
+//        if (isFirstBoot) {
+//            try {
+//                Log.d(TAG, "BEFORE 30 seconds sleep.");
+//                Thread.sleep(30000);
+//                Log.d(TAG, "AFTER 30 seconds sleep.");
+//            } catch (Exception e) {
+//                Log.e(TAG, "30 seconds sleep Exception: ", e);
+//            } finally {
+//                Log.d(TAG, "Before set KEY_IS_FIRST_BOOT to false");
+//                prefs.edit().putBoolean(KEY_IS_FIRST_BOOT, false).apply();
+//                Log.d(TAG, "Before REBOOT");
+//                rebootDevice(context);
+//                Log.d(TAG, "After REBOOT");
+//            }
+//        }
     }
 
     @SuppressLint("MissingPermission")
